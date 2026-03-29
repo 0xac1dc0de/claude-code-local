@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Local Browser Agent — Direct MLX + Chrome DevTools Protocol.
+Brave Browser Agent — Direct MLX + Chrome DevTools Protocol via Brave.
 Handles iframes, Shadow DOM, ProseMirror editors automatically.
 """
 
@@ -11,9 +11,11 @@ import json, os, re, sys, time, asyncio, websockets, urllib.request
 MLX_URL = os.environ.get("MLX_URL", "http://localhost:4000")
 CDP_URL = os.environ.get("CDP_URL", "http://127.0.0.1:9222")
 MODEL = os.environ.get("MLX_MODEL_NAME", "claude-sonnet-4-6")
-MAX_STEPS = int(os.environ.get("MAX_STEPS", "15"))
+MAX_STEPS = int(os.environ.get("MAX_STEPS", "25"))
+MAX_CONTEXT_TOKENS = int(os.environ.get("MAX_CONTEXT_TOKENS", "32000"))
 
 B, G, Y, R, D, BD, RS = "\033[94m", "\033[92m", "\033[93m", "\033[91m", "\033[2m", "\033[1m", "\033[0m"
+CYAN = "\033[96m"
 
 SYSTEM = """You are a browser agent. Return ONE JSON tool call per response.
 
@@ -36,11 +38,29 @@ class CDP:
         self.ws = None; self.mid = 0
 
     async def connect(self):
-        with urllib.request.urlopen(f"{CDP_URL}/json", timeout=5) as r:
-            pages = json.loads(r.read())
+        try:
+            with urllib.request.urlopen(f"{CDP_URL}/json", timeout=5) as r:
+                pages = json.loads(r.read())
+        except Exception:
+            print(f"{R}Cannot connect to Brave on port 9222.{RS}")
+            print(f"{D}Brave must be running with --remote-debugging-port=9222{RS}")
+            sys.exit(1)
         ws_url = next((p["webSocketDebuggerUrl"] for p in pages if p.get("type")=="page" and "devtools" not in p.get("url","")), None)
         if not ws_url: ws_url = pages[0]["webSocketDebuggerUrl"] if pages else None
-        if not ws_url: print(f"{R}No browser pages{RS}"); sys.exit(1)
+        if not ws_url:
+            # No tabs — open one automatically (Brave requires PUT for /json/new)
+            print(f"{D}No open tabs, creating one...{RS}")
+            try:
+                req = urllib.request.Request(f"{CDP_URL}/json/new", method="PUT")
+                with urllib.request.urlopen(req, timeout=5) as r:
+                    new_page = json.loads(r.read())
+                ws_url = new_page.get("webSocketDebuggerUrl")
+                time.sleep(1)
+            except Exception:
+                pass
+        if not ws_url:
+            print(f"{R}Could not open a Brave tab. Try opening one manually and run again.{RS}")
+            sys.exit(1)
         self.ws = await websockets.connect(ws_url, max_size=50*1024*1024)
         for m in ["DOM.enable","Accessibility.enable","Page.enable","Runtime.enable"]: await self.cmd(m)
 
@@ -134,11 +154,15 @@ class CDP:
         Uses DOM.pierce + DOM.focus + Input.insertText — works through
         cross-origin iframes, Shadow DOM, and ProseMirror editors.
         """
-        # Step 1: Click Comments button
-        print(f"  {D}→ Clicking Comments button...{RS}")
+        # Step 1: Scroll to comment section (do NOT click submit buttons)
+        print(f"  {D}→ Scrolling to comment section...{RS}")
         await self.cmd("Runtime.evaluate",{"expression":"""
-            const btn=Array.from(document.querySelectorAll('button')).find(b=>/comment/i.test(b.textContent));
-            if(btn){btn.scrollIntoView({block:'center'});btn.click()}
+            const section = document.querySelector('#comments, .comments-area, .comment-section, [id*=comment], textarea#comment, #respond');
+            if(section) section.scrollIntoView({block:'center',behavior:'instant'});
+            else {
+                const btn=Array.from(document.querySelectorAll('button,a')).find(b=>/show comment|view comment|add comment|leave comment/i.test(b.textContent) && !/post|submit|send/i.test(b.textContent));
+                if(btn){btn.scrollIntoView({block:'center'});btn.click()}
+            }
         """})
         await asyncio.sleep(3)
 
@@ -215,14 +239,24 @@ class CDP:
 
             await iws.close()
 
-        # Fallback: simple main-page textarea
+        # Fallback: WordPress / standard comment textarea
+        print(f"  {D}→ Looking for comment textarea...{RS}")
         escaped = text.replace("\\","\\\\").replace("'","\\'").replace("\n","\\n")
         r = await self.cmd("Runtime.evaluate",{"expression":f"""
-            const el=document.querySelector('textarea,input[type=text],[contenteditable=true]');
-            el?(el.focus(),el.value?el.value='{escaped}':el.innerText='{escaped}','found'):'none'
+            const el = document.querySelector('textarea#comment, textarea[name=comment], textarea.comment-textarea, textarea');
+            if(el) {{
+                el.scrollIntoView({{block:'center',behavior:'instant'}});
+                el.focus();
+                el.value = '{escaped}';
+                el.dispatchEvent(new Event('input', {{bubbles:true}}));
+                'found'
+            }} else 'none'
         ""","returnByValue":True})
         if r.get("result",{}).get("value")=="found":
-            return f"{G}Comment drafted! ({len(text)} chars){RS}"
+            await asyncio.sleep(0.3)
+            # Scroll up slightly so user can see the filled textarea
+            await self.cmd("Runtime.evaluate",{"expression":"window.scrollBy(0,-100)"})
+            return f"{G}Comment drafted! ({len(text)} chars) — review in browser, NOT submitted.{RS}"
 
         return f"{Y}No comment input found. Comments may not be available on this page.{RS}"
 
@@ -232,8 +266,78 @@ class CDP:
 
 # ─── MLX ─────────────────────────────────────────────────────────────────────
 
+def estimate_tokens(text):
+    """Rough token estimate: ~4 chars per token for English."""
+    return len(text) // 4
+
+def estimate_messages_tokens(messages):
+    """Estimate total token count across all messages."""
+    total = estimate_tokens(SYSTEM)
+    for m in messages:
+        total += estimate_tokens(m.get("content", "")) + 4  # role overhead
+    return total
+
+def context_meter(messages):
+    """Return a visual context usage bar and stats."""
+    used = estimate_messages_tokens(messages)
+    pct = min(100, int(used / MAX_CONTEXT_TOKENS * 100))
+    bar_len = 20
+    filled = int(bar_len * pct / 100)
+    bar = "█" * filled + "░" * (bar_len - filled)
+    # Color: green <50%, yellow 50-75%, red >75%
+    if pct < 50:
+        color = G
+    elif pct < 75:
+        color = Y
+    else:
+        color = R
+    return f"{color}[Context: {pct}% {bar} {used//1000:.0f}K/{MAX_CONTEXT_TOKENS//1000:.0f}K tokens]{RS}"
+
+def summarize_dropped_steps(messages):
+    """Compress a list of assistant/user message pairs into a one-line summary."""
+    summaries = []
+    for m in messages:
+        content = m.get("content", "")
+        role = m.get("role", "")
+        if role == "assistant":
+            # Extract tool name from JSON
+            try:
+                tc = json.loads(content)
+                tool = tc.get("tool", "?")
+                args_brief = ", ".join(f"{k}={str(v)[:30]}" for k, v in tc.get("args", {}).items())
+                summaries.append(f"{tool}({args_brief})")
+            except (json.JSONDecodeError, AttributeError):
+                pass
+        elif role == "user" and content.startswith("Result: "):
+            result_brief = content[8:80].replace("\n", " ")
+            if summaries:
+                summaries[-1] += f" → {result_brief}"
+    return "; ".join(summaries) if summaries else "previous steps"
+
+def smart_trim(messages, original_task):
+    """Trim messages intelligently: keep task, compress old steps, keep recent."""
+    total_tokens = estimate_messages_tokens(messages)
+    # Only trim if we're over 60% of context budget
+    if total_tokens < MAX_CONTEXT_TOKENS * 0.6:
+        return messages
+    # Keep first message (task) + last 12 messages (6 exchanges)
+    # Compress everything in between into a summary
+    keep_recent = 12
+    if len(messages) <= keep_recent + 1:
+        return messages
+    first = messages[0]
+    middle = messages[1:-keep_recent]
+    recent = messages[-keep_recent:]
+    summary = summarize_dropped_steps(middle)
+    # Build a context reminder that includes the summary
+    context_msg = {
+        "role": "user",
+        "content": f"[CONTEXT SUMMARY of steps {1}-{len(middle)//2}: {summary}]\n\nOriginal task reminder: {original_task}\n\nContinue with the task. Return ONE JSON tool call."
+    }
+    return [first, context_msg] + recent
+
 def ask_model(messages):
-    body = json.dumps({"model":MODEL,"max_tokens":1024,"temperature":0.3,"system":SYSTEM,"messages":messages}).encode()
+    body = json.dumps({"model":MODEL,"max_tokens":2048,"temperature":0.3,"system":SYSTEM,"messages":messages}).encode()
     req = urllib.request.Request(f"{MLX_URL}/v1/messages",data=body,headers={"Content-Type":"application/json"})
     with urllib.request.urlopen(req,timeout=120) as r: result=json.loads(r.read())
     return "".join(b.get("text","") for b in result.get("content",[]) if b.get("type")=="text")
@@ -250,33 +354,24 @@ def generate_comment(article_text):
         result = json.loads(r.read())
     raw = "".join(b.get("text", "") for b in result.get("content", []) if b.get("type") == "text")
     text = re.sub(r'<think>.*?</think>', '', raw, flags=re.DOTALL).strip()
+    text = re.sub(r'\*+', '', text)  # Remove markdown
 
-    # Qwen ALWAYS reasons out loud. Extract the actual comment from its output.
-    # It typically writes drafts like: *Draft 2:* Actual comment text here.
-    # Find ALL draft-like content and take the last/best one
-    drafts = re.findall(r'[Dd]raft\s*\d*[^:]*:\*?\s*(.+?)(?=\n\s*\*?\s*\*?(?:[DCcRrWw]|$))', text, re.DOTALL)
-    for d in reversed(drafts):
-        clean = re.sub(r'\*+', '', d).strip().strip('"')
-        if len(clean) > 40 and not clean.startswith(('Two ', 'Three ', 'Stronger', 'Fits', 'Addresses')):
-            return clean
+    # Qwen ALWAYS dumps reasoning. Extract only real comment sentences.
+    all_sentences = re.findall(r'([A-Z][^.!?]{20,}[.!?])', text)
 
-    # Find quoted text (model sometimes puts final answer in quotes)
-    quoted = re.findall(r'"([^"]{40,}[.!?])"', text)
-    if quoted:
-        return quoted[-1]
+    # Filter out meta-reasoning — NOT part of a real comment
+    meta = ['draft','constraint','sentence','critique','user','task','goal',
+            'checking','format','plain text','let me','let\'s','count',
+            'analyze','request','input','output','concise','polish',
+            'revised','alternative','stick to','meets','criteria',
+            'thinking','process','step','final','make sure']
+    real = [s.strip() for s in all_sentences
+            if not any(w in s.lower() for w in meta) and len(s) > 30]
 
-    # Find the last 2-3 complete sentences that aren't analysis
-    all_sentences = re.findall(r'([A-Z][^*\n\d]{25,}[.!?])', text)
-    # Filter out meta-sentences about the task
-    real = [s for s in all_sentences if not any(w in s.lower() for w in ['draft','constraint','sentence','critique','user','task','goal','checking','revised','output','format','plain text'])]
     if real:
         return ' '.join(real[-3:])
 
-    # Absolute fallback — just take last 2 sentences regardless
-    if all_sentences:
-        return ' '.join(all_sentences[-2:])
-
-    return "This situation raises serious concerns that demand greater transparency and accountability."
+    return "This situation raises serious concerns that demand greater transparency."
 
 
 def parse(text):
@@ -370,15 +465,22 @@ async def run(task):
         else:
             print(f"         {D}→ No article found with topic '{topic}', falling back to model{RS}")
 
-    messages = [{"role":"user","content":f"Task: {task}\n\nRULES:\n- Navigate to the site, then snapshot.\n- Find article links and click one.\n- After reaching an article page, call done immediately."}]
+    task_prompt = f"Task: {task}\n\nRULES:\n- Navigate to the site, then snapshot.\n- Find article links and click one.\n- After reaching an article page, call done immediately."
+    messages = [{"role":"user","content":task_prompt}]
+
+    print(f"  {context_meter(messages)}")
 
     for step in range(1, MAX_STEPS+1):
+        # Smart trim before sending to model (replaces hard cutoff)
+        messages = smart_trim(messages, task)
+
         t0=time.time(); resp=ask_model(messages); elapsed=time.time()-t0
         tc = parse(resp)
         if not tc:
             print(f"  {D}Step {step} (no tool) {elapsed:.1f}s{RS}")
             messages.append({"role":"assistant","content":resp})
             messages.append({"role":"user","content":'Respond with ONLY: {"tool":"name","args":{...}}'})
+            print(f"  {context_meter(messages)}")
             continue
 
         tool=tc.get("tool",""); args=tc.get("args",{})
@@ -412,23 +514,26 @@ async def run(task):
         if len(r)>4000: r=r[:4000]+"...(truncated)"
         messages.append({"role":"assistant","content":json.dumps(tc)})
         messages.append({"role":"user","content":f"Result: {r}"})
-        if len(messages)>10: messages=messages[:1]+messages[-8:]
+        # Show context meter after each step
         print(f"         {D}→ {r[:100].replace(chr(10),' ')}{RS}")
+        print(f"  {context_meter(messages)}")
 
-    # If we hit max steps on a comment task, try commenting on whatever page we're on
+    # If we hit max steps on a comment task, draft comment on current page (never auto-submit)
     if is_comment:
         if not comment_text:
             article_text = await cdp.js("document.title + '. ' + Array.from(document.querySelectorAll('p')).map(p=>p.innerText).filter(t=>t.length>40).slice(0,6).join(' ')")
             comment_text = generate_comment(article_text)
-        print(f"\n  {BD}Auto-commenting on current page...{RS}")
+        print(f"\n  {Y}Hit step limit — drafting comment on current page...{RS}")
         result = await cdp.post_comment(comment_text)
         print(f"  {result}")
+        print(f"  {Y}Review the draft in the browser before submitting.{RS}")
 
     await cdp.close()
 
 def main():
-    print(f"\n{BD}  → Local Browser Agent{RS}")
-    print(f"  {D}MLX + CDP · iframes + Shadow DOM · no cloud{RS}\n")
+    print(f"\n{BD}  → Brave Browser Agent{RS}")
+    print(f"  {D}MLX + Brave CDP · iframes + Shadow DOM · no cloud{RS}")
+    print(f"  {D}Context budget: {MAX_CONTEXT_TOKENS//1000}K tokens · Response: 2048 max · Steps: {MAX_STEPS}{RS}\n")
 
     # If args passed, run once
     if len(sys.argv) > 1:
