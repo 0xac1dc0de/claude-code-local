@@ -9,8 +9,10 @@ CLAUDE_BIN="${CLAUDE_BIN:-$HOME/.local/bin/claude}"
 MLX_SERVER="$HOME/.local/mlx-native-server/server.py"
 MLX_PYTHON="$HOME/.local/mlx-server/bin/python3"
 
+# Default points at our own abliterated MLX upload:
+#   https://huggingface.co/divinetribe/Llama-3.3-70B-Instruct-abliterated-8bit-mlx
 # Override with MLX_MODEL=<your-path-or-hf-id>
-MLX_MODEL_DEFAULT="mlx-community/Llama-3.3-70B-Instruct-abliterated-8bit"
+MLX_MODEL_DEFAULT="divinetribe/Llama-3.3-70B-Instruct-abliterated-8bit-mlx"
 
 # Start MLX server if not running
 if ! lsof -i :4000 >/dev/null 2>&1; then

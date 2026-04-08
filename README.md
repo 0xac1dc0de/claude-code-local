@@ -27,10 +27,12 @@ We started with one model. Now we ship a **roster**. Same MLX server, same Anthr
    ║   THE QUICK ONE      ║    THE WISE ONE       ║    THE BEAST         ║
    ║                      ║                       ║                      ║
    ║  Speed   ~15 tok/s   ║  Speed   ~7 tok/s     ║  Speed  65 tok/s 🚀  ║
-   ║  Params  31 B dense  ║  Params  70 B dense   ║  Params 122 B / 10B  ║
-   ║  Quant   4-bit IT    ║  Quant   8-bit FULL   ║  Quant  4-bit MoE    ║
-   ║  RAM     ~18 GB      ║  RAM     ~70 GB       ║  RAM    ~75 GB       ║
-   ║  Disk    18 GB       ║  Disk    70 GB        ║  Disk   65 GB        ║
+   ║  Params  31 B dense  ║  Params  71 B dense   ║  Params 122 B / 10B  ║
+   ║  Quant   4-bit IT    ║  Quant   8-bit affine ║  Quant  4-bit MoE    ║
+   ║  RAM     ~18 GB      ║  RAM     ~75 GB       ║  RAM    ~75 GB       ║
+   ║  Disk    18 GB       ║  Disk    75 GB        ║  Disk   65 GB        ║
+   ║                      ║                       ║                      ║
+   ║                      ║  ⭐ Uploaded by us!    ║                      ║
    ║                      ║                       ║                      ║
    ║  🎯 Daily coding     ║  🎯 Hardest reasoning ║  🎯 Max throughput   ║
    ║  💪 Fits 64 GB Mac   ║  💪 Full precision    ║  💪 Active sparsity  ║
@@ -40,10 +42,31 @@ We started with one model. Now we ship a **roster**. Same MLX server, same Anthr
 | Pick This Model | If You Want… | Min RAM | Launcher |
 |---|---|:---:|---|
 | 🟢 **Gemma 4 31B** | Daily coding, low RAM, fast loop | 32 GB | `Gemma 4 Code.command` |
-| 🟠 **Llama 3.3 70B** | Hardest reasoning at full 8-bit precision | 96 GB | `Llama 70B.command` |
+| 🟠 **Llama 3.3 70B** ⭐ | Hardest reasoning at full 8-bit precision | 96 GB | `Llama 70B.command` |
 | 🔵 **Qwen 3.5 122B** | Max tok/s, biggest brain | 96 GB | `Claude Local.command` |
 
 > 💡 **Fun fact:** Qwen wins raw speed because it's an MoE — only 10B of 122B params activate per token. Llama 70B is the slowest *and* the smartest because it's full-precision dense weights. Gemma is the lightweight champ that fits where the others can't.
+
+### ⭐ Our Own Abliterated Upload
+
+The Llama 3.3 70B in this lineup isn't from a generic mirror — **we packaged and uploaded our own 8-bit MLX abliterated build** to HuggingFace so anyone running this repo can pull it with one command:
+
+```bash
+MLX_MODEL=divinetribe/Llama-3.3-70B-Instruct-abliterated-8bit-mlx \
+  bash scripts/start-mlx-server.sh
+```
+
+| | |
+|---|---|
+| 🤗 **HuggingFace** | [`divinetribe/Llama-3.3-70B-Instruct-abliterated-8bit-mlx`](https://huggingface.co/divinetribe/Llama-3.3-70B-Instruct-abliterated-8bit-mlx) |
+| 📐 **Quant** | 8-bit affine, group size 64 |
+| 💾 **Disk** | ~75 GB (15 safetensors shards) |
+| 🧠 **Params** | 71 B dense |
+| 📏 **Context** | 128 K tokens |
+| 🔓 **Abliteration base** | [huihui-ai abliterated build](https://huggingface.co/huihui-ai) of Meta's Llama 3.3 70B Instruct ([what abliteration means](https://huggingface.co/blog/mlabonne/abliteration)) |
+| 🍎 **MLX conversion + 8-bit pack** | by us — chosen to preserve quality over minimal footprint |
+
+> ⚠️ **Use it responsibly.** "Abliterated" suppresses the model's built-in refusal direction so it doesn't refuse benign-but-edgy requests. It is **not** a general capability upgrade, and you remain bound by the upstream Llama 3.3 license.
 
 ---
 
@@ -583,7 +606,10 @@ Built on the shoulders of giants:
 | 🍎 [MLX](https://github.com/ml-explore/mlx) | Apple Silicon ML framework | Apple |
 | 📦 [mlx-lm](https://github.com/ml-explore/mlx-examples) | Model loading + inference | Apple |
 | 🟢 [Gemma](https://blog.google/technology/developers/gemma-open-models/) | The 31B fighter | Google DeepMind |
-| 🟠 [Llama](https://llama.meta.com/) | The 70B fighter | Meta |
+| 🟠 [Llama](https://llama.meta.com/) | The 70B fighter (base weights) | Meta |
+| ⭐ [Llama 3.3 70B Abliterated 8-bit MLX](https://huggingface.co/divinetribe/Llama-3.3-70B-Instruct-abliterated-8bit-mlx) | **Our own MLX-packed abliterated upload** — the THE WISE ONE in the lineup | divinetribe (us) |
+| 🔧 [huihui-ai](https://huggingface.co/huihui-ai) | Original abliteration of Llama 3.3 70B Instruct | huihui-ai |
+| 📖 [Abliteration explained](https://huggingface.co/blog/mlabonne/abliteration) | The technique we built on | Maxime Labonne |
 | 🔵 [Qwen 3.5](https://qwenlm.github.io/) | The 122B fighter | Alibaba |
 | ⚡ [TurboQuant](https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/) | KV cache compression research | Google Research |
 

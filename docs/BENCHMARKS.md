@@ -20,8 +20,10 @@ The same MLX server runs all three. Just swap the `MLX_MODEL` env var.
 | Model | Tier | Architecture | Disk | RAM | tok/s | Best at |
 |---|---|---|:---:|:---:|:---:|---|
 | **Qwen 3.5 122B-A10B** | 🔵 THE BEAST | MoE 122B / 10B active, 4-bit | 65 GB | ~75 GB | **65** | Maximum throughput |
-| **Llama 3.3 70B Abliterated** | 🟠 THE WISE ONE | Dense 70B, 8-bit full prec | 70 GB | ~70 GB | ~7 | Hardest reasoning |
+| **Llama 3.3 70B Abliterated** ⭐ | 🟠 THE WISE ONE | Dense 71B, 8-bit affine, group 64, 128K ctx | 75 GB | ~75 GB | ~7 | Hardest reasoning |
 | **Gemma 4 31B Abliterated** | 🟢 THE QUICK ONE | Dense 31B, 4-bit IT | 18 GB | ~18 GB | ~15 | Daily coding, low RAM |
+
+> ⭐ The Llama 3.3 70B build is **our own MLX-packed upload**: [`divinetribe/Llama-3.3-70B-Instruct-abliterated-8bit-mlx`](https://huggingface.co/divinetribe/Llama-3.3-70B-Instruct-abliterated-8bit-mlx). 8-bit affine quantization with group size 64, chosen to preserve quality over minimal footprint. Built on top of [huihui-ai's abliteration](https://huggingface.co/huihui-ai) of Meta's Llama 3.3 70B Instruct.
 
 > Qwen wins raw tok/s because only 10B of its 122B params activate per token (MoE). Llama is the slowest but the smartest at 8-bit full precision. Gemma is the lightweight champion — fits on a 64 GB Mac with room to spare.
 

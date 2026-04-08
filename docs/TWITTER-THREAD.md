@@ -19,7 +19,7 @@ Here's the lineup and how I built it:
 The fighters:
 
 🔵 Qwen 3.5 122B — THE BEAST (65 tok/s, MoE A10B, 4-bit)
-🟠 Llama 3.3 70B Abliterated — THE WISE ONE (~7 tok/s, 8-bit full precision)
+🟠 Llama 3.3 70B Abliterated — THE WISE ONE (~7 tok/s, 8-bit affine, 128K ctx) ⭐ I packed and uploaded this one myself: huggingface.co/divinetribe/Llama-3.3-70B-Instruct-abliterated-8bit-mlx
 🟢 Gemma 4 31B Abliterated — THE QUICK ONE (~15 tok/s, 4-bit IT)
 
 Same MLX server runs all three. Swap one env var and you swap the brain.

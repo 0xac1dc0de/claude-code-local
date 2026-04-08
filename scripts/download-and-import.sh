@@ -23,8 +23,10 @@ case "${1:-}" in
     LABEL="Qwen 3.5 122B (THE BEAST — 65 tok/s, ~75 GB RAM)"
     ;;
   llama|llama70|70b)
-    MODEL="${MLX_MODEL:-mlx-community/Llama-3.3-70B-Instruct-abliterated-8bit}"
-    LABEL="Llama 3.3 70B Abliterated (THE WISE ONE — ~7 tok/s, ~70 GB RAM)"
+    # Our own abliterated MLX upload:
+    #   https://huggingface.co/divinetribe/Llama-3.3-70B-Instruct-abliterated-8bit-mlx
+    MODEL="${MLX_MODEL:-divinetribe/Llama-3.3-70B-Instruct-abliterated-8bit-mlx}"
+    LABEL="Llama 3.3 70B Abliterated (THE WISE ONE — ~7 tok/s, ~75 GB disk, divinetribe/8-bit MLX)"
     ;;
   gemma|gemma31|31b|"")
     MODEL="${MLX_MODEL:-mlx-community/gemma-4-31b-it-abliterated-4bit}"

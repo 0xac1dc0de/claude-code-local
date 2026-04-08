@@ -7,9 +7,9 @@ Supports tool use: converts Anthropic tool format <-> the model's native functio
 calling format (Qwen, Gemma, Llama all use the HuggingFace `<tool_call>` JSON convention).
 
 Pick a model from the lineup with the MLX_MODEL env var:
-    MLX_MODEL=mlx-community/Qwen3.5-122B-A10B-4bit              (THE BEAST)
-    MLX_MODEL=mlx-community/gemma-4-31b-it-abliterated-4bit     (THE QUICK ONE — default)
-    MLX_MODEL=mlx-community/Llama-3.3-70B-Instruct-abliterated-8bit  (THE WISE ONE)
+    MLX_MODEL=mlx-community/Qwen3.5-122B-A10B-4bit                       (THE BEAST)
+    MLX_MODEL=mlx-community/gemma-4-31b-it-abliterated-4bit              (THE QUICK ONE — default)
+    MLX_MODEL=divinetribe/Llama-3.3-70B-Instruct-abliterated-8bit-mlx    (THE WISE ONE — our own MLX upload)
 """
 
 import json
