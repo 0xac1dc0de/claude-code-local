@@ -10,6 +10,7 @@
     <a href="#-benchmarks"><img src="https://img.shields.io/badge/🚀_Claude_Code-17.6s_per_task-blue?style=for-the-badge" alt="Claude Code"></a>
     <a href="#-safety--how-the-data-flows"><img src="https://img.shields.io/badge/🔒_Privacy-100%25_Local-success?style=for-the-badge" alt="100% Local"></a>
     <a href="#-hands-free-voice-mode--the-whole-loop-on-device"><img src="https://img.shields.io/badge/🎤_Voice-Hands_Free-orange?style=for-the-badge" alt="Hands-Free Voice"></a>
+    <a href="#-the-complete-local-first-stack"><img src="https://img.shields.io/badge/🪴_Ambient-Computing-ff69b4?style=for-the-badge" alt="Ambient Computing"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/📜_License-MIT-yellow?style=for-the-badge" alt="MIT"></a>
   </p>
 </p>
@@ -675,6 +676,40 @@ We didn't start here. We went through three generations in one night:
 | 4️⃣ | **The lineup** | varies | One server, three brains. Pick your fighter. |
 
 > 🎯 Each generation taught us something. Killing the proxy made it fast. Adding the lineup made it flexible.
+
+---
+
+## 🧩 The Complete Local-First Stack
+
+`claude-code-local` is the **brain** — the MLX Anthropic server, the launcher lineup, the tool-call translation layer. For the full ambient-computing experience, it pairs with two sibling projects that handle the other parts of the loop. Each repo stands alone; together they form a **local-first ambient computing stack** that never sends a keystroke, a voice clip, or a page load to the cloud.
+
+```
+      🎤 NarrateClaude         🤖 claude-code-local          🌐 browser-agent
+      ─────────────────        ────────────────────         ──────────────────
+      EARS + MOUTH             BRAIN (this repo)            HANDS
+      ─────────────────        ────────────────────         ──────────────────
+      Apple SFSpeech     →     MLX + Gemma / Llama     →    Chrome DevTools
+      continuous listener      Anthropic API server         iframes + Shadow DOM
+      AppleScript inject       Tool-call parser (×3)        Brave browser control
+      cloned-voice TTS         Code mode, prompt cache      Snapshot + click + type
+      ─────────────────        ────────────────────         ──────────────────
+      🔗 github.com/           🔗 github.com/                🔗 github.com/
+      nicedreamzapp/           nicedreamzapp/                nicedreamzapp/
+      NarrateClaude            claude-code-local             browser-agent
+```
+
+| Want to… | Clone… |
+|---|---|
+| 🤖 Run Claude Code against a local model — keyboard in, text out | Just this repo |
+| 🎤 Talk to Claude Code and hear it narrate back in your own voice | This repo **+** [`NarrateClaude`](https://github.com/nicedreamzapp/NarrateClaude) |
+| 🌐 Have Claude Code drive a real browser autonomously | This repo **+** [`browser-agent`](https://github.com/nicedreamzapp/browser-agent) |
+| 🪴 All of it. Ambient computing on one Mac, nothing in the cloud | All three |
+
+### 🪴 Why this matters — the ambient-computing angle
+
+The real goal isn't "a faster Claude Code" — it's **getting off screens and mice**. Hunched-over-screen computing is breaking our bodies: carpal tunnel, curved spines, $1500 ergonomic chairs bought to patch the damage the rest of the desk is doing. That era is ending. These three repos are pieces of what comes next — **computing that's around you instead of in front of you**. Screens become optional, typing becomes optional, sitting still becomes optional, but your data and your voice never leave your house.
+
+👉 **For the full manifesto, see the "[Why I Built This — Ambient Computing Starts Here](https://github.com/nicedreamzapp/NarrateClaude#-why-i-built-this--ambient-computing-starts-here)" section in the NarrateClaude README.** That's where the philosophy lives; the repos are just the first implementations.
 
 ---
 
