@@ -606,9 +606,10 @@ Built on the shoulders of giants:
 | 🤖 [Claude Code](https://claude.ai/claude-code) | AI coding agent | Anthropic |
 | 🍎 [MLX](https://github.com/ml-explore/mlx) | Apple Silicon ML framework | Apple |
 | 📦 [mlx-lm](https://github.com/ml-explore/mlx-examples) | Model loading + inference | Apple |
-| 🟢 [Gemma](https://blog.google/technology/developers/gemma-open-models/) | The 31B fighter | Google DeepMind |
+| 🟢 [Gemma](https://blog.google/technology/developers/gemma-open-models/) | The 31B fighter (base weights) | Google DeepMind |
+| ⭐ [Gemma 4 31B Abliterated 4-bit MLX](https://huggingface.co/divinetribe/gemma-4-31b-it-abliterated-4bit-mlx) | **Our own MLX-packed abliterated upload** — THE QUICK ONE in the lineup | divinetribe (us) |
 | 🟠 [Llama](https://llama.meta.com/) | The 70B fighter (base weights) | Meta |
-| ⭐ [Llama 3.3 70B Abliterated 8-bit MLX](https://huggingface.co/divinetribe/Llama-3.3-70B-Instruct-abliterated-8bit-mlx) | **Our own MLX-packed abliterated upload** — the THE WISE ONE in the lineup | divinetribe (us) |
+| ⭐ [Llama 3.3 70B Abliterated 8-bit MLX](https://huggingface.co/divinetribe/Llama-3.3-70B-Instruct-abliterated-8bit-mlx) | **Our own MLX-packed abliterated upload** — THE WISE ONE in the lineup | divinetribe (us) |
 | 🔧 [huihui-ai](https://huggingface.co/huihui-ai) | Original abliteration of Llama 3.3 70B Instruct | huihui-ai |
 | 📖 [Abliteration explained](https://huggingface.co/blog/mlabonne/abliteration) | The technique we built on | Maxime Labonne |
 | 🔵 [Qwen 3.5](https://qwenlm.github.io/) | The 122B fighter | Alibaba |
