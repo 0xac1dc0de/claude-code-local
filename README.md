@@ -198,6 +198,12 @@ This is the part we're proudest of. **Your code never leaves your Mac.** Not for
 | **Model weights** | HuggingFace verified mlx-community repos | **0** at runtime | ✅ Safe |
 | **iMessage scripts** | Pure shell + AppleScript | localhost only (Studio Record port 17494) | ✅ Safe |
 
+### ⚠️ Transparency Note: Claude Code's Own Binary
+
+Claude Code is Anthropic's closed-source CLI. On startup, it may attempt a **non-blocking** connection to `api.anthropic.com` (likely session validation or version check) — even when `ANTHROPIC_BASE_URL` points to localhost. **This does not affect your code or prompts** — all inference still goes to the local MLX model. If you're offline or a firewall blocks the call, Claude Code still works fine.
+
+Our code (server.py, launchers, scripts) makes **zero** outbound connections. But we can't suppress the startup behavior of a closed-source binary we don't control. If full network isolation matters to you, use a firewall rule to block `api.anthropic.com` — everything will still work.
+
 ### 🚫 What We Ripped Out
 
 > ⚠️ We **[removed LiteLLM](https://x.com/Tahseen_Rahman/status/2035501506242240520)** after supply-chain attack concerns. Every dependency was re-audited from scratch. If a package had unexplained network calls, it didn't ship.
