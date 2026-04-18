@@ -26,6 +26,8 @@
 > | *You are here* 👈 | 🔗 [**github.com/nicedreamzapp/NarrateClaude**](https://github.com/nicedreamzapp/NarrateClaude) | 🔗 [**github.com/nicedreamzapp/browser-agent**](https://github.com/nicedreamzapp/browser-agent) |
 >
 > 👉 **[See how all three fit together below](#-the-complete-local-first-stack)**
+>
+> 🖥️ **More of my open-source software:** [**nicedreamzwholesale.com/software**](https://nicedreamzwholesale.com/software/)
 
 ---
 
